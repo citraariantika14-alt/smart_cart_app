@@ -1,56 +1,103 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/cart_item.dart';
 import '../helpers/db_helper.dart';
 
 class CartProvider with ChangeNotifier {
-  List<CartItem> _cartItems = [];
+  Map<String, CartItem> _items = {};
 
-  List<CartItem> get cartItems => _cartItems;
-
-  double get totalAmount {
-    return _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
+  Map<String, CartItem> get items {
+    return {..._items};
   }
 
-  // Ambil seluruh isi keranjang dari SQLite
-  Future<void> fetchCartItems() async {
-    final data = await DBHelper.getCartItems();
-    _cartItems = data.map((item) => CartItem.fromMap(item)).toList();
+  int get itemCount {
+    return _items.length;
+  }
+
+  double get totalAmount {
+    var total = 0.0;
+    _items.forEach((key, cartItem) {
+      total += cartItem.price * cartItem.quantity;
+    });
+    return total;
+  }
+
+  Future<void> fetchAndSetCartItems() async {
+    final dataList = await DBHelper.getCartItems();
+    final Map<String, CartItem> loadedItems = {};
+    for (var item in dataList) {
+      loadedItems[item['id']] = CartItem.fromMap(item);
+    }
+    _items = loadedItems;
     notifyListeners();
   }
 
-  // Tambah produk ke keranjang SQLite
-  Future<void> addItem(dynamic productId, String name, double price, String imageUrl) async {
-    final existingIndex = _cartItems.indexWhere((item) => item.name == name);
-
-    if (existingIndex >= 0) {
-      final existingItem = _cartItems[existingIndex];
-      final newQty = existingItem.quantity + 1;
-      await DBHelper.updateCartQuantity(existingItem.id, newQty);
+  Future<void> addItem(String productId, double price, String title) async {
+    if (_items.containsKey(productId)) {
+      _items.update(
+        productId,
+        (existingCartItem) => CartItem(
+          id: existingCartItem.id,
+          title: existingCartItem.title,
+          price: existingCartItem.price,
+          quantity: existingCartItem.quantity + 1,
+        ),
+      );
     } else {
-      final newItem = {
-        'id': productId is int ? productId : DateTime.now().millisecondsSinceEpoch,
-        'name': name,
-        'price': price,
-        'quantity': 1,
-      };
-      await DBHelper.insertCart(newItem);
+      _items.putIfAbsent(
+        productId,
+        () => CartItem(
+          id: productId,
+          title: title,
+          price: price,
+          quantity: 1,
+        ),
+      );
     }
-    await fetchCartItems(); // Re-fetch data dari SQLite
+    notifyListeners();
+    await DBHelper.insertCartItem({
+      'id': productId,
+      'title': title,
+      'quantity': _items[productId]!.quantity,
+      'price': price,
+    });
   }
 
-  // Ubah kuantitas (+ / -) di SQLite
-  Future<void> updateQuantity(dynamic id, int newQuantity) async {
-    if (newQuantity <= 0) {
-      await DBHelper.deleteCartItem(id);
-    } else {
-      await DBHelper.updateCartQuantity(id, newQuantity);
+  Future<void> removeSingleItem(String productId) async {
+    if (!_items.containsKey(productId)) {
+      return;
     }
-    await fetchCartItems();
+    if (_items[productId]!.quantity > 1) {
+      _items.update(
+        productId,
+        (existingCartItem) => CartItem(
+          id: existingCartItem.id,
+          title: existingCartItem.title,
+          price: existingCartItem.price,
+          quantity: existingCartItem.quantity - 1,
+        ),
+      );
+      await DBHelper.insertCartItem({
+        'id': productId,
+        'title': _items[productId]!.title,
+        'quantity': _items[productId]!.quantity,
+        'price': _items[productId]!.price,
+      });
+    } else {
+      _items.remove(productId);
+      await DBHelper.deleteCartItem(productId);
+    }
+    notifyListeners();
   }
 
-  // Hapus item dari SQLite
-  Future<void> removeItem(dynamic id) async {
-    await DBHelper.deleteCartItem(id);
-    await fetchCartItems();
+  Future<void> removeItem(String productId) async {
+    _items.remove(productId);
+    notifyListeners();
+    await DBHelper.deleteCartItem(productId);
+  }
+
+  Future<void> clear() async {
+    _items = {};
+    notifyListeners();
+    await DBHelper.clearCart();
   }
 }

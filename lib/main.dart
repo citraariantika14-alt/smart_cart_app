@@ -5,7 +5,6 @@ import 'providers/cart_provider.dart';
 import 'screens/catalog_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -16,18 +15,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ProductProvider()..fetchProducts(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => CartProvider()..fetchCartItems(), // Memuat isi keranjang dari SQLite saat app start
-        ),
+        ChangeNotifierProvider(create: (_) => ProductProvider()..fetchProducts()),
+        // Menggunakan fetchAndSetCartItems() sesuai fungsi di cart_provider.dart laporan
+        ChangeNotifierProvider(create: (_) => CartProvider()..fetchAndSetCartItems()),
       ],
       child: MaterialApp(
-        title: 'Smart-Cart SMKN 3 Tuban',
+        title: 'Smart Cart SQLite',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8C5427)),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
         home: const CatalogScreen(),

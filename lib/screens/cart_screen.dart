@@ -3,175 +3,173 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key});
+  static const routeName = '/cart';
 
-  String formatTanpaTitik(dynamic price) {
-    if (price is num) {
-      return 'Rp ${price.toInt()}';
-    }
-    String str = price.toString().replaceAll('.', '').replaceAll(',', '');
-    return 'Rp $str';
-  }
+  const CartScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    const primaryBrown = Color(0xFF8C5427);
-    const lightBg = Color(0xFFF8F7F5);
+    final cartProvider = Provider.of<CartProvider>(context);
+    final cartItemList = cartProvider.items.values.toList();
 
     return Scaffold(
-      backgroundColor: lightBg,
+      backgroundColor: const Color(0xFFF8F8F8),
       appBar: AppBar(
-        backgroundColor: lightBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
           'Keranjang Belanja',
           style: TextStyle(
             color: Colors.black,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.normal,
             fontSize: 18,
           ),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: Consumer<CartProvider>(
-        builder: (context, cartProvider, child) {
-          final cartItems = cartProvider.cartItems;
-
-          if (cartItems.isEmpty) {
-            return const Center(
-              child: Text(
-                'Keranjang belanja Anda kosong',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          children: [
+            // Card Total Pembayaran Atas
+            Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            );
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: cartItems.length,
-                  itemBuilder: (context, index) {
-                    final item = cartItems[index];
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Pembayaran',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: const Color(0xFF8B5E3C),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Text(
+                        'Rp ${cartProvider.totalAmount.toInt()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Daftar Item Keranjang
+            Expanded(
+              child: cartItemList.isEmpty
+                  ? const Center(child: Text('Keranjang kosong'))
+                  : ListView.builder(
+                      itemCount: cartItemList.length,
+                      itemBuilder: (ctx, i) {
+                        final item = cartItemList[i];
+                        return Card(
+                          elevation: 0,
+                          color: Colors.white,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
                               children: [
-                                Text(
-                                  item.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                // Gambar Produk Berdasarkan Judul/Title Produk
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey[100],
+                                    child: item.title.toLowerCase().contains('tas')
+                                        ? Image.asset('assets/tas.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag))
+                                        : item.title.toLowerCase().contains('lampu')
+                                            ? Image.asset('assets/lampu.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.lightbulb))
+                                            : const Icon(Icons.shopping_bag, color: Color(0xFF8B5E3C)),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  formatTanpaTitik(item.price),
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
+                                const SizedBox(width: 16),
+                                // Nama Produk & Subtitle Total
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Total: Rp ${(item.price * item.quantity).toInt()}',
+                                        style: TextStyle(
+                                          color: Colors.brown[300],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                ),
+                                // Kontrol Tombol Minus, Angka Jumlah (1x/2x), dan Plus
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove, size: 20, color: Colors.black87),
+                                      onPressed: () {
+                                        cartProvider.removeSingleItem(item.id);
+                                      },
+                                    ),
+                                    SizedBox(
+                                      width: 28,
+                                      child: Text(
+                                        '${item.quantity}x',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add, size: 20, color: Colors.black87),
+                                      onPressed: () {
+                                        // Memanggil addItem sesuai 3 parameter asli laporan: (id, price, title)
+                                        cartProvider.addItem(
+                                          item.id,
+                                          item.price,
+                                          item.title,
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove_circle_outline,
-                                    color: primaryBrown),
-                                onPressed: () {
-                                  cartProvider.updateQuantity(
-                                      item.id, item.quantity - 1);
-                                },
-                              ),
-                              Text(
-                                '${item.quantity}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle_outline,
-                                    color: primaryBrown),
-                                onPressed: () {
-                                  cartProvider.updateQuantity(
-                                      item.id, item.quantity + 1);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red),
-                                onPressed: () {
-                                  cartProvider.removeItem(item.id);
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, -2),
+                        );
+                      },
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Pembayaran:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          formatTanpaTitik(cartProvider.totalAmount),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryBrown,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
